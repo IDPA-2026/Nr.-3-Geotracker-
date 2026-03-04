@@ -25,7 +25,7 @@ void setup() {
   sendATCommand("ATE0", "OK", 3000);
 
   Serial.println("Schalte GPS ein...");
-  sendATCommand("AT+CGNSSPWR=1", "OK", 3000); // Richtig für SIM7670G
+  sendATCommand("AT+CGNSSPWR=1", "OK", 3000);
 
   Serial.println("Setze APN...");
   String apnCmd = String("AT+CGDCONT=1,\"IP\",\"") + apn + "\"";
@@ -46,20 +46,29 @@ void loop() {
   Serial.println("---- Lese GPS Daten ----");
   String rawGPS = getGPSData();
   String payload;
-  float latitude = 0.0;
-  float longitude = 0.0;
+  
+  float latitude = 0.0, longitude = 0.0, altitude = 0.0, speedKmh = 0.0, course = 0.0;
+  String gpsDate = "", gpsTime = "";
 
-  // Wenn wir echte Daten haben und das Parsing erfolgreich war
-  if (rawGPS != "" && parseGPS(rawGPS, latitude, longitude)) {
+  if (rawGPS != "" && parseFullGPS(rawGPS, latitude, longitude, altitude, speedKmh, course, gpsDate, gpsTime)) {
     Serial.println("GPS Fix gefunden & geparst!");
     Serial.print("Lat: "); Serial.print(latitude, 6);
     Serial.print(" | Lon: "); Serial.println(longitude, 6);
+    Serial.print("Alt: "); Serial.print(altitude); Serial.println(" m");
+    Serial.print("Speed: "); Serial.print(speedKmh); Serial.println(" km/h");
     
-    // JSON mit echten Koordinaten zusammenbauen
-    payload = "{\"status\":\"online\",\"lat\":" + String(latitude, 6) + ",\"lon\":" + String(longitude, 6) + "}";
+    // Komplettes JSON zusammenbauen
+    payload = "{\"status\":\"online\"";
+    payload += ",\"lat\":" + String(latitude, 6);
+    payload += ",\"lon\":" + String(longitude, 6);
+    payload += ",\"alt\":" + String(altitude, 1);
+    payload += ",\"speed_kmh\":" + String(speedKmh, 1);
+    payload += ",\"course\":" + String(course, 1);
+    payload += ",\"date\":\"" + gpsDate + "\"";
+    payload += ",\"time\":\"" + gpsTime + "\"}";
   } else {
     Serial.println("Kein GPS Fix. Suche Satelliten...");
-    payload = "{\"status\":\"suche_satelliten\"}";
+    payload = "{\"status\":\"suche_satelliten_1\"}";
   }
 
   Serial.println("---- Starte HTTP Upload ----");
@@ -117,18 +126,31 @@ String getGPSData() {
   return "";
 }
 
-bool parseGPS(String nmea, float &lat, float &lon) {
-  int firstComma = nmea.indexOf(',');
-  int secondComma = nmea.indexOf(',', firstComma + 1);
-  int thirdComma = nmea.indexOf(',', secondComma + 1);
-  int fourthComma = nmea.indexOf(',', thirdComma + 1);
+bool parseFullGPS(String nmea, float &lat, float &lon, float &alt, float &speed, float &course, String &date, String &time) {
+  // Beispiel Input: "4729.8791,N,00843.2576,E,040326,081850.000,466.5,1.95,346.0"
+  int p[9];
+  p[0] = nmea.indexOf(',');
+  for (int i = 1; i < 9; i++) {
+    p[i] = nmea.indexOf(',', p[i-1] + 1);
+    // Erlaubt das Fehlen des letzten Kommas, falls der String am Ende aufhört
+    if (p[i] == -1 && i < 8) return false; 
+  }
 
-  if (firstComma == -1 || fourthComma == -1) return false;
-
-  String latStr = nmea.substring(0, firstComma);
-  String latDir = nmea.substring(firstComma + 1, secondComma);
-  String lonStr = nmea.substring(secondComma + 1, thirdComma);
-  String lonDir = nmea.substring(thirdComma + 1, fourthComma);
+  String latStr = nmea.substring(0, p[0]);
+  String latDir = nmea.substring(p[0] + 1, p[1]);
+  String lonStr = nmea.substring(p[1] + 1, p[2]);
+  String lonDir = nmea.substring(p[2] + 1, p[3]);
+  date = nmea.substring(p[3] + 1, p[4]);
+  time = nmea.substring(p[4] + 1, p[5]);
+  String altStr = nmea.substring(p[5] + 1, p[6]);
+  String speedStr = nmea.substring(p[6] + 1, p[7]);
+  
+  String courseStr;
+  if (p[8] != -1) {
+    courseStr = nmea.substring(p[7] + 1, p[8]);
+  } else {
+    courseStr = nmea.substring(p[7] + 1);
+  }
 
   if (latStr.length() < 4 || lonStr.length() < 5) return false;
 
@@ -143,6 +165,11 @@ bool parseGPS(String nmea, float &lat, float &lon) {
   float lonMin = lonStr.substring(3).toFloat();
   lon = lonDeg + (lonMin / 60.0);
   if (lonDir == "W") lon *= -1.0;
+
+  // Zusätzliche Daten
+  alt = altStr.toFloat();
+  speed = speedStr.toFloat() * 1.852; // NMEA liefert Knoten. 1 Knoten = 1.852 km/h
+  course = courseStr.toFloat();
 
   return true;
 }
