@@ -1,0 +1,128 @@
+% =============================================================================
+% main.tex — Hauptdokument der IDPA-Dokumentation
+% Geotracker-Projekt, IDPA 2026
+% =============================================================================
+
+\documentclass[
+  12pt,           % Schriftgrösse 12 pt (zulässig: 10–12 pt)
+  a4paper,        % Papierformat A4
+  oneside,        % Einseitiger Druck
+  bibliography=totoc % Literaturverzeichnis ins Inhaltsverzeichnis
+]{scrreprt}
+
+% -----------------------------------------------------------------------------
+% Sprache & Zeichenkodierung
+% -----------------------------------------------------------------------------
+\usepackage[T1]{fontenc}          % T1-Zeichenkodierung für Westeuropa
+\usepackage[utf8]{inputenc}       % UTF-8-Eingabe
+\usepackage[ngerman]{babel}       % Deutsche Sprachregeln (neue Rechtschreibung)
+
+% -----------------------------------------------------------------------------
+% Schrift & Layout
+% -----------------------------------------------------------------------------
+\usepackage{lmodern}              % Skalierbare Latin Modern-Schriften
+\usepackage{microtype}            % Mikrotypografie (besserer Blocksatz)
+\usepackage[
+  left=3cm,
+  right=2.5cm,
+  top=2.5cm,
+  bottom=2.5cm
+]{geometry}                       % Seitenränder
+
+% Zeilenabstand 1.2 (entspricht 1.2-fachem Abstand, Vorgabe 1–1.2)
+\usepackage{setspace}
+\setstretch{1.2}
+
+\usepackage{parskip}              % Absatzabstand statt Einrückung
+
+% -----------------------------------------------------------------------------
+% Grafiken & Farben
+% -----------------------------------------------------------------------------
+\usepackage{graphicx}             % Grafiken einbinden (\includegraphics)
+\usepackage[dvipsnames]{xcolor}   % Farben
+\graphicspath{{./images/}}        % Standardpfad für Bilder
+
+% -----------------------------------------------------------------------------
+% Tabellen & Listen
+% -----------------------------------------------------------------------------
+\usepackage{booktabs}             % Professionelle Tabellen
+\usepackage{longtable}            % Mehrseitige Tabellen
+\usepackage{enumitem}             % Angepasste Listen
+
+% -----------------------------------------------------------------------------
+% Code-Listings
+% -----------------------------------------------------------------------------
+\usepackage{listings}             % Quellcode-Listings
+\usepackage{lstautogobble}        % Einrückung automatisch entfernen
+\lstset{
+  basicstyle=\ttfamily\small,
+  breaklines=true,
+  frame=single,
+  autogobble=true,
+  language=C,
+  commentstyle=\color{gray},
+  keywordstyle=\color{blue},
+  stringstyle=\color{red!60!black},
+}
+
+% -----------------------------------------------------------------------------
+% Verweise & Links
+% -----------------------------------------------------------------------------
+\usepackage[
+  hidelinks,       % Keine farbigen Rahmen um Links
+  pdftitle={IDPA - Geotracker},
+  pdfauthor={Autorenteam},
+  pdfsubject={Interdisziplinäre Projektarbeit 2026},
+  pdflang={de-CH}
+]{hyperref}
+\usepackage{cleveref}             % Intelligente Querverweise (\cref)
+
+% -----------------------------------------------------------------------------
+% Literaturverzeichnis (BibLaTeX mit biber)
+% -----------------------------------------------------------------------------
+\usepackage[
+  backend=biber,
+  style=ieee,
+  sorting=none
+]{biblatex}
+\addbibresource{literatur.bib}    % BibTeX-Datenbank
+
+% -----------------------------------------------------------------------------
+% Kopf- und Fusszeile
+% -----------------------------------------------------------------------------
+\usepackage{scrlayer-scrpage}
+\pagestyle{scrheadings}
+\clearpairofpagestyles
+\automark[section]{chapter}
+\ihead{\headmark}                 % Innen: aktuelles Kapitel
+\ohead{\pagemark}                 % Aussen: Seitenzahl
+\cfoot{}
+
+% =============================================================================
+% Dokument beginnt hier
+% =============================================================================
+\begin{document}
+
+% --- Titelblatt (keine Seitenzahl) -------------------------------------------
+\include{chapters/00_titelblatt}
+
+% --- Frontmatter (römische Seitenzahlen) -------------------------------------
+\frontmatter
+\include{chapters/01_abstract}
+\tableofcontents
+\listoffigures
+\listoftables
+
+% --- Hauptteil (arabische Seitenzahlen) --------------------------------------
+\mainmatter
+\include{chapters/02_einleitung}
+\include{chapters/03_hauptteil_main}
+\include{chapters/04_fazit}
+\include{chapters/05_ehrenwoertliche_erklaerung}
+\include{chapters/06_anhang}
+
+% --- Backmatter --------------------------------------------------------------
+\backmatter
+\printbibliography[heading=bibintoc, title={Literaturverzeichnis}]
+
+\end{document}

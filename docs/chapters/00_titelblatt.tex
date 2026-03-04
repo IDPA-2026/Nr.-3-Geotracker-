@@ -1,0 +1,62 @@
+% =============================================================================
+% 00_titelblatt.tex — Titelblatt der IDPA
+% =============================================================================
+% Dieses Blatt bildet die offizielle Titelseite gemäss Schulvorgabe.
+% Ersetze alle Platzhalter (<<...>>) durch die tatsächlichen Angaben.
+% =============================================================================
+
+\begin{titlepage}
+  \centering
+
+  % --- Logo und Name der Schule ----------------------------------------------
+  % Binde das offizielle Schullogo ein (Datei z. B. images/schullogo.png).
+  % Falls kein Logo vorhanden ist, kann die Zeile \includegraphics auskommentiert
+  % und durch den Schulnamen in Textform ersetzt werden.
+  % Passe die Dateiendung an das tatsächliche Format an (.png, .pdf, .jpg)
+  \includegraphics[width=5cm]{schullogo.png}\\[0.5cm]
+  {\Large \textbf{<<Name der Schule>>}}\\[0.3cm]
+  {\large <<Abteilung / Fachrichtung>>}
+
+  \vspace{2cm}
+
+  % --- Art der Arbeit --------------------------------------------------------
+  {\large Interdisziplinäre Projektarbeit (IDPA)}\\[0.5cm]
+
+  % --- Vollständiger Titel der Arbeit ----------------------------------------
+  {\Huge \textbf{Geotracker}}\\[0.4cm]
+  {\Large \textbf{<<Untertitel der Arbeit>>}}
+
+  \vspace{2cm}
+
+  % --- Autor:innen und Klasse ------------------------------------------------
+  % Füge alle beteiligten Personen mit Klasse ein.
+  \begin{tabular}{ll}
+    \textbf{Autor:innen:} & <<Vorname Nachname>>, Klasse <<Klasse>> \\
+                          & <<Vorname Nachname>>, Klasse <<Klasse>> \\
+                          & <<Vorname Nachname>>, Klasse <<Klasse>> \\
+  \end{tabular}
+
+  \vspace{1.5cm}
+
+  % --- Betreuende Lehrpersonen -----------------------------------------------
+  \begin{tabular}{ll}
+    \textbf{Betreuung:} & <<Titel Vorname Nachname>> \\
+                        & <<Titel Vorname Nachname>> \\
+  \end{tabular}
+
+  \vspace{1.5cm}
+
+  % --- Abgabedatum -----------------------------------------------------------
+  \begin{tabular}{ll}
+    \textbf{Abgabedatum:} & <<TT. Monat JJJJ>> \\
+  \end{tabular}
+
+  \vfill
+
+  % --- Schuljahr -------------------------------------------------------------
+  {\small Schuljahr <<JJJJ/JJJJ>>}
+
+\end{titlepage}
+
+% Seitenzähler zurücksetzen, damit das Titelblatt keine Seitenzahl trägt
+\setcounter{page}{0}
