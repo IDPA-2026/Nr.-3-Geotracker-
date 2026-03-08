@@ -17,7 +17,7 @@ const locationIcon = L.icon({
 
 export default function Map({ point }: Props) {
     return (
-        <div className="h-[70vh] w-full overflow-hidden rounded-2xl border border-zinc-200 shadow-sm">
+        <div className="h-full w-full">
             <MapContainer
                 center={[point.lat, point.lng]}
                 zoom={13}
