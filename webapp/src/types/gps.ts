@@ -12,4 +12,10 @@ export type TrackerLocationRaw = {
 export type GpsPoint = {
     lat: number;
     lng: number;
+    alt?: number;
+    speed_kmh?: number;
+    status?: string;
+    date?: string;
+    time?: string;
+    course?: number;
 };

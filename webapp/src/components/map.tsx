@@ -1,3 +1,4 @@
+// DONT use server actions because it's bad with real-time data.
 "use client";
 
 import { MapContainer, Marker, TileLayer } from "react-leaflet";
