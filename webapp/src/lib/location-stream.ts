@@ -18,7 +18,7 @@ class LocationStreamHub {
         if (this.started) return;
         this.started = true;
 
-        const locationRef = ref(db, "locations/test_tracker");
+        const locationRef = ref(db, "");
 
         this.unsubscribe = onValue(locationRef, (snapshot) => {
             const raw = snapshot.val() as TrackerLocationRaw | null;
