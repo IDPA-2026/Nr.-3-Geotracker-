@@ -57,7 +57,19 @@ function buildPulseIcon(mode: "online" | "offline") {
 function formatLastUpdate(point: GpsPoint): string {
     const ts = trackerTimestampToMs(point.date, point.time);
     if (!ts) return "Unknown";
-    return new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "medium" }).format(new Date(ts));
+    return new Intl.DateTimeFormat(undefined, {
+        dateStyle: "medium",
+        timeStyle: "medium",
+    }).format(new Date(ts));
+}
+
+function formatDuration(totalSeconds: number | null): string {
+    if (totalSeconds == null) return "—";
+    const mins = Math.round(totalSeconds / 60);
+    if (mins < 60) return `${mins} min`;
+    const h = Math.floor(mins / 60);
+    const m = mins % 60;
+    return m === 0 ? `${h} h` : `${h} h ${m} min`;
 }
 
 export default function Map({ point }: Props) {
@@ -66,6 +78,7 @@ export default function Map({ point }: Props) {
     const [route, setRoute] = useState<LatLng[]>([]);
     const [loadingRoute, setLoadingRoute] = useState(false);
     const [profile, setProfile] = useState<RoutingProfile>("driving");
+    const [routeDurationSec, setRouteDurationSec] = useState<number | null>(null);
 
     useEffect(() => {
         const id = setInterval(() => setNowMs(Date.now()), 1000);
@@ -75,7 +88,8 @@ export default function Map({ point }: Props) {
     const tracker = useMemo(() => ({ lat: point.lat, lng: point.lng }), [point.lat, point.lng]);
 
     const offline = isOffline(point, nowMs, 30_000);
-    const mode: "online" | "offline" = point.status === "online" && !offline ? "online" : "offline";
+    const mode: "online" | "offline" =
+        point.status === "online" && !offline ? "online" : "offline";
     const markerIcon = useMemo(() => buildPulseIcon(mode), [mode]);
     const statusLabel = mode === "online" ? "Online" : "Offline";
     const lastUpdate = formatLastUpdate(point);
@@ -85,6 +99,7 @@ export default function Map({ point }: Props) {
         try {
             const r = await getRouteOSRM(from, to, selectedProfile);
             setRoute(r?.geometry ?? []);
+            setRouteDurationSec(r?.durationSeconds ?? null);
         } finally {
             setLoadingRoute(false);
         }
@@ -110,9 +125,15 @@ export default function Map({ point }: Props) {
                 loading={loadingRoute}
                 profile={profile}
                 onProfileChange={setProfile}
+                etaLabel={formatDuration(routeDurationSec)}
             />
 
-            <MapContainer center={[point.lat, point.lng]} zoom={13} className="h-full w-full" zoomControl={false}>
+            <MapContainer
+                center={[point.lat, point.lng]}
+                zoom={13}
+                className="h-full w-full"
+                zoomControl={false}
+            >
                 <ZoomControl position="topright" />
                 <TileLayer
                     attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
@@ -134,7 +155,9 @@ export default function Map({ point }: Props) {
                             <h4 className="gps-popup__title">{DEVICE_NAME}</h4>
                             <p className="gps-popup__row">
                                 <span className="gps-popup__label">Status:</span>{" "}
-                                <span className={mode === "online" ? "gps-status-online" : "gps-status-offline"}>{statusLabel}</span>
+                                <span className={mode === "online" ? "gps-status-online" : "gps-status-offline"}>
+                  {statusLabel}
+                </span>
                             </p>
                             <p className="gps-popup__row">
                                 <span className="gps-popup__label">Last update:</span> {lastUpdate}

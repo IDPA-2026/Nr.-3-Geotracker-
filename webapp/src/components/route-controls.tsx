@@ -9,6 +9,7 @@ type Props = {
     loading: boolean;
     profile: RoutingProfile;
     onProfileChange: (profile: RoutingProfile) => void;
+    etaLabel: string;
 };
 
 export default function RouteControls({
@@ -16,6 +17,7 @@ export default function RouteControls({
                                           loading,
                                           profile,
                                           onProfileChange,
+                                          etaLabel,
                                       }: Props) {
     const [query, setQuery] = useState("");
     const [suggestions, setSuggestions] = useState<NominatimSuggestion[]>([]);
@@ -124,6 +126,11 @@ export default function RouteControls({
                     <option value="cycling">Cycling</option>
                     <option value="walking">Walking</option>
                 </select>
+            </div>
+
+            <div className="mt-3 rounded-md border bg-zinc-50 px-3 py-2 text-sm">
+                <span className="text-zinc-600">Total time: </span>
+                <span className="font-semibold text-black">{etaLabel}</span>
             </div>
         </div>
     );
