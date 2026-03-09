@@ -154,7 +154,13 @@ export default function Map({ point }: Props) {
                 {route.length > 1 && (
                     <Polyline
                         positions={route.map((p) => [p.lat, p.lng] as [number, number])}
-                        pathOptions={{ color: "#0ea5e9", weight: 5, opacity: 0.85 }}
+                        pathOptions={{
+                            color: "#1d4ed8",
+                            weight: 9,
+                            opacity: 0.95,
+                            lineCap: "round",
+                            lineJoin: "round",
+                        }}
                     />
                 )}
 
