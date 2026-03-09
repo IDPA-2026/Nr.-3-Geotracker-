@@ -9,13 +9,30 @@ type OsrmResponse = {
     }>;
 };
 
+const OSRM_BASE: Record<RoutingProfile, string> = {
+    driving: "https://routing.openstreetmap.de/routed-car",
+    cycling: "https://routing.openstreetmap.de/routed-bike",
+    walking: "https://routing.openstreetmap.de/routed-foot",
+};
+
+const OSRM_PROFILE_SEGMENT: Record<RoutingProfile, string> = {
+    driving: "driving",
+    cycling: "bike",
+    walking: "foot",
+};
+
 export async function getRouteOSRM(
     from: LatLng,
     to: LatLng,
     profile: RoutingProfile
 ): Promise<RouteResult | null> {
     const coords = `${from.lng},${from.lat};${to.lng},${to.lat}`;
-    const url = `https://router.project-osrm.org/route/v1/${profile}/${coords}?overview=full&geometries=geojson`;
+    const base = OSRM_BASE[profile];
+    const profileSegment = OSRM_PROFILE_SEGMENT[profile];
+
+    const url =
+        `${base}/route/v1/${profileSegment}/${coords}` +
+        `?overview=full&geometries=geojson&alternatives=false&steps=false`;
 
     const res = await fetch(url, { cache: "no-store" });
     if (!res.ok) return null;
@@ -24,7 +41,6 @@ export async function getRouteOSRM(
     if (data.code !== "Ok" || !data.routes?.length) return null;
 
     const best = data.routes[0];
-
     return {
         distanceMeters: best.distance,
         durationSeconds: best.duration,
