@@ -5,6 +5,7 @@ import { MapContainer, Marker, TileLayer } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import type { GpsPoint } from "@/types/gps";
+import {useEffect, useMemo, useState} from "react";
 
 type Props = {
     point: GpsPoint;
@@ -28,10 +29,10 @@ function trackerTimestampToMs(date?: string, time?: string): number | null {
     return Date.UTC(fullYear, mm - 1, dd, hh, mi, ss);
 }
 
-function isOffline(point: GpsPoint, staleAfterMs = 30_000): boolean {
+function isOffline(point: GpsPoint, nowMs: number, staleAfterMs = 30_000): boolean {
     const ts = trackerTimestampToMs(point.date, point.time);
     if (!ts) return true;
-    return Date.now() - ts > staleAfterMs;
+    return nowMs - ts > staleAfterMs;
 }
 
 function buildPulseIcon(mode: "online" | "offline") {
@@ -63,18 +64,26 @@ const locationIcon = L.icon({
 });
 
 export default function Map({ point }: Props) {
+    const [nowMs, setNowMs] = useState(() => Date.now());
+
+    useEffect(() => {
+        const id = setInterval(() => setNowMs(Date.now()), 1000);
+        return () => clearInterval(id);
+    }, []);
+
+    const offline = isOffline(point, nowMs, 30_000);
+    const mode: "online" | "offline" = point.status === "online" && !offline ? "online" : "offline";
+
+    const markerIcon = useMemo(() => buildPulseIcon(mode), [mode]);
+
     return (
         <div className="h-full w-full">
-            <MapContainer
-                center={[point.lat, point.lng]}
-                zoom={13}
-                className="h-full w-full"
-            >
+            <MapContainer center={[point.lat, point.lng]} zoom={13} className="h-full w-full">
                 <TileLayer
                     attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
                     url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                 />
-                <Marker position={[point.lat, point.lng]} icon={locationIcon} />
+                <Marker position={[point.lat, point.lng]} icon={markerIcon} />
             </MapContainer>
         </div>
     );

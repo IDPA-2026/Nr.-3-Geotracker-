@@ -1,0 +1,69 @@
+.gps-div-icon {
+    background: transparent;
+    border: none;
+}
+
+.gps-pin-wrap {
+    position: relative;
+    width: 44px;
+    height: 44px;
+    display: grid;
+    place-items: center;
+}
+
+.gps-pulse {
+    position: absolute;
+    width: 38px;
+    height: 38px;
+    border-radius: 9999px;
+    background: var(--pulse-color);
+    animation: gpsPulse 1.8s ease-out infinite;
+}
+
+.gps-pin {
+    position: relative;
+    width: 20px;
+    height: 20px;
+    border-radius: 9999px;
+    background: var(--pin-core);
+    box-shadow:
+            0 0 0 3px var(--pin-border),
+            0 6px 20px var(--pin-glow);
+    display: grid;
+    place-items: center;
+    z-index: 2;
+    animation: gpsCoreBeat 1.8s ease-in-out infinite;
+}
+
+.gps-pin-inner {
+    width: 6px;
+    height: 6px;
+    border-radius: 9999px;
+    background: #fff;
+    opacity: 0.95;
+}
+
+@keyframes gpsPulse {
+    0% {
+        transform: scale(0.65);
+        opacity: 0.9;
+    }
+    70% {
+        transform: scale(1.35);
+        opacity: 0.2;
+    }
+    100% {
+        transform: scale(1.55);
+        opacity: 0;
+    }
+}
+
+@keyframes gpsCoreBeat {
+    0%,
+    100% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.08);
+    }
+}
