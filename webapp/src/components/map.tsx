@@ -5,6 +5,7 @@ import { MapContainer, Marker, TileLayer } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import type { GpsPoint } from "@/types/gps";
+import "@/styles/map-marker.css";
 import {useEffect, useMemo, useState} from "react";
 
 type Props = {
