@@ -118,6 +118,17 @@ export default function Map({ point }: Props) {
         return () => clearTimeout(id);
     }, [start, tracker.lat, tracker.lng, profile]);
 
+    const startIcon = useMemo(
+        () =>
+            L.divIcon({
+                className: "start-div-icon",
+                html: `<div class="start-pin"></div>`,
+                iconSize: [18, 18],
+                iconAnchor: [9, 9],
+            }),
+        []
+    );
+
     return (
         <div className="relative h-full w-full">
             <RouteControls
@@ -147,7 +158,7 @@ export default function Map({ point }: Props) {
                     />
                 )}
 
-                {start && <Marker position={[start.lat, start.lng]} />}
+                {start && <Marker position={[start.lat, start.lng]} icon={startIcon} zIndexOffset={900} />}
 
                 <Marker position={[point.lat, point.lng]} icon={markerIcon} zIndexOffset={1000}>
                     <Popup autoPan closeButton>

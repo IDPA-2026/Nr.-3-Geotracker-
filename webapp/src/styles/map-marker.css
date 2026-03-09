@@ -84,3 +84,17 @@
     color: #b91c1c;
     font-weight: 700;
 }
+
+.start-div-icon {
+    background: transparent;
+    border: none;
+}
+
+.start-pin {
+    width: 14px;
+    height: 14px;
+    border-radius: 9999px;
+    background: #111827;
+    border: 2px solid #ffffff;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+}
