@@ -27,6 +27,12 @@ function trackerTimestampToMs(date?: string, time?: string): number | null {
     const fullYear = 2000 + yy;
     return Date.UTC(fullYear, mm - 1, dd, hh, mi, ss);
 }
+
+function isStale(point: GpsPoint, staleAfterMs = 30_000): boolean {
+    const ts = trackerTimestampToMs(point.date, point.time);
+    if (!ts) return true;
+    return Date.now() - ts > staleAfterMs;
+}
 const locationIcon = L.icon({
     iconUrl: "/location.svg",
     iconSize: [32, 32],
