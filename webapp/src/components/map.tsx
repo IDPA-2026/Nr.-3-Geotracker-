@@ -6,7 +6,7 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import "@/styles/map-marker.css";
 import type { GpsPoint } from "@/types/gps";
-import type { LatLng } from "@/types/routing";
+import type { LatLng, RoutingProfile } from "@/types/routing";
 import RouteControls from "@/components/route-controls";
 import { geocodePlace } from "@/lib/geocoding";
 import { getRouteOSRM } from "@/lib/routing";
@@ -65,6 +65,7 @@ export default function Map({ point }: Props) {
     const [start, setStart] = useState<LatLng | null>(null);
     const [route, setRoute] = useState<LatLng[]>([]);
     const [loadingRoute, setLoadingRoute] = useState(false);
+    const [profile, setProfile] = useState<RoutingProfile>("driving");
 
     useEffect(() => {
         const id = setInterval(() => setNowMs(Date.now()), 1000);
@@ -79,10 +80,10 @@ export default function Map({ point }: Props) {
     const statusLabel = mode === "online" ? "Online" : "Offline";
     const lastUpdate = formatLastUpdate(point);
 
-    async function calculateRoute(from: LatLng, to: LatLng) {
+    async function calculateRoute(from: LatLng, to: LatLng, selectedProfile: RoutingProfile) {
         setLoadingRoute(true);
         try {
-            const r = await getRouteOSRM(from, to);
+            const r = await getRouteOSRM(from, to, selectedProfile);
             setRoute(r?.geometry ?? []);
         } finally {
             setLoadingRoute(false);
@@ -93,22 +94,26 @@ export default function Map({ point }: Props) {
         const geo = await geocodePlace(place);
         if (!geo) return;
         setStart(geo);
-        await calculateRoute(geo, tracker);
+        await calculateRoute(geo, tracker, profile);
     }
 
     useEffect(() => {
         if (!start) return;
-        const id = setTimeout(() => calculateRoute(start, tracker), 1000);
+        const id = setTimeout(() => calculateRoute(start, tracker, profile), 1000);
         return () => clearTimeout(id);
-    }, [start, tracker.lat, tracker.lng]);
+    }, [start, tracker.lat, tracker.lng, profile]);
 
     return (
         <div className="relative h-full w-full">
-            <RouteControls onSetStart={handleSetStart} loading={loadingRoute} />
+            <RouteControls
+                onSetStart={handleSetStart}
+                loading={loadingRoute}
+                profile={profile}
+                onProfileChange={setProfile}
+            />
 
             <MapContainer center={[point.lat, point.lng]} zoom={13} className="h-full w-full" zoomControl={false}>
                 <ZoomControl position="topright" />
-
                 <TileLayer
                     attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
                     url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"

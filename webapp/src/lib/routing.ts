@@ -1,4 +1,4 @@
-import type { LatLng, RouteResult } from "@/types/routing";
+import type { LatLng, RouteResult, RoutingProfile } from "@/types/routing";
 
 type OsrmResponse = {
     code: string;
@@ -9,9 +9,13 @@ type OsrmResponse = {
     }>;
 };
 
-export async function getRouteOSRM(from: LatLng, to: LatLng): Promise<RouteResult | null> {
+export async function getRouteOSRM(
+    from: LatLng,
+    to: LatLng,
+    profile: RoutingProfile
+): Promise<RouteResult | null> {
     const coords = `${from.lng},${from.lat};${to.lng},${to.lat}`;
-    const url = `https://router.project-osrm.org/route/v1/driving/${coords}?overview=full&geometries=geojson`;
+    const url = `https://router.project-osrm.org/route/v1/${profile}/${coords}?overview=full&geometries=geojson`;
 
     const res = await fetch(url, { cache: "no-store" });
     if (!res.ok) return null;
