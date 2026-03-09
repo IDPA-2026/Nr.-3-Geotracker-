@@ -12,6 +12,9 @@ type Props = {
     point: GpsPoint;
 };
 
+const DEVICE_NAME = "GPS Tracker";
+
+
 function trackerTimestampToMs(date?: string, time?: string): number | null {
     if (!date || !time) return null;
     if (date.length !== 6) return null;
@@ -58,11 +61,6 @@ function buildPulseIcon(mode: "online" | "offline") {
         iconAnchor: [22, 22],
     });
 }
-const locationIcon = L.icon({
-    iconUrl: "/location.svg",
-    iconSize: [32, 32],
-    iconAnchor: [16, 16],
-});
 
 export default function Map({ point }: Props) {
     const [nowMs, setNowMs] = useState(() => Date.now());
