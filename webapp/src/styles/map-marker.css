@@ -26,9 +26,7 @@
     height: 20px;
     border-radius: 9999px;
     background: var(--pin-core);
-    box-shadow:
-            0 0 0 3px var(--pin-border),
-            0 6px 20px var(--pin-glow);
+    box-shadow: 0 0 0 3px var(--pin-border), 0 6px 20px var(--pin-glow);
     display: grid;
     place-items: center;
     z-index: 2;
@@ -44,26 +42,45 @@
 }
 
 @keyframes gpsPulse {
-    0% {
-        transform: scale(0.65);
-        opacity: 0.9;
-    }
-    70% {
-        transform: scale(1.35);
-        opacity: 0.2;
-    }
-    100% {
-        transform: scale(1.55);
-        opacity: 0;
-    }
+    0% { transform: scale(0.65); opacity: 0.9; }
+    70% { transform: scale(1.35); opacity: 0.2; }
+    100% { transform: scale(1.55); opacity: 0; }
 }
 
 @keyframes gpsCoreBeat {
-    0%,
-    100% {
-        transform: scale(1);
-    }
-    50% {
-        transform: scale(1.08);
-    }
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.08); }
+}
+
+.gps-popup {
+    min-width: 220px;
+    font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+}
+
+.gps-popup__title {
+    margin: 0 0 8px;
+    font-size: 14px;
+    font-weight: 700;
+    color: #111827;
+}
+
+.gps-popup__row {
+    margin: 0 0 6px;
+    font-size: 13px;
+    color: #374151;
+}
+
+.gps-popup__label {
+    color: #6b7280;
+    font-weight: 600;
+}
+
+.gps-status-online {
+    color: #1d4ed8;
+    font-weight: 700;
+}
+
+.gps-status-offline {
+    color: #b91c1c;
+    font-weight: 700;
 }
