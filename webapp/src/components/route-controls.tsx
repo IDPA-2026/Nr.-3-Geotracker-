@@ -18,7 +18,7 @@ export default function RouteControls({ onSetStart, loading }: Props) {
                     value={place}
                     onChange={(e) => setPlace(e.target.value)}
                     placeholder="Enter location"
-                    className="w-full rounded-md border px-3 py-2 text-sm"
+                    className="w-full rounded-md border px-3 py-2 text-sm text-black placeholder:text-zinc-500"
                 />
                 <button
                     onClick={() => onSetStart(place)}
