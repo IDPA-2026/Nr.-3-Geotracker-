@@ -10,6 +10,7 @@ import type { LatLng, RoutingProfile } from "@/types/routing";
 import RouteControls from "@/components/route-controls";
 import { geocodePlace } from "@/lib/geocoding";
 import { getRouteOSRM } from "@/lib/routing";
+import InfoPanel from "@/components/infoPanel";
 
 type Props = { point: GpsPoint };
 const DEVICE_NAME = "Gps Tracker";
@@ -138,6 +139,8 @@ export default function Map({ point }: Props) {
                 onProfileChange={setProfile}
                 etaLabel={formatDuration(routeDurationSec)}
             />
+
+            <InfoPanel point={point} />
 
             <MapContainer
                 center={[point.lat, point.lng]}
