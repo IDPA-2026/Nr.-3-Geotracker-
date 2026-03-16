@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { MapContainer, Marker, Popup, Polyline, TileLayer, ZoomControl } from "react-leaflet";
+import { MapContainer, Marker, Popup, Polyline, TileLayer, ZoomControl, useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import "@/styles/map-marker.css";
@@ -73,6 +73,17 @@ function formatDuration(totalSeconds: number | null): string {
     return m === 0 ? `${h} h` : `${h} h ${m} min`;
 }
 
+function RecenterController({ lat, lng, zoom, tick }: { lat: number; lng: number; zoom: number; tick: number }) {
+    const map = useMap();
+
+    useEffect(() => {
+        if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+        map.setView([lat, lng], zoom);
+    }, [map, lat, lng, zoom, tick]);
+
+    return null;
+}
+
 export default function Map({ point }: Props) {
     const [nowMs, setNowMs] = useState(() => Date.now());
     const [start, setStart] = useState<LatLng | null>(null);
@@ -80,6 +91,7 @@ export default function Map({ point }: Props) {
     const [loadingRoute, setLoadingRoute] = useState(false);
     const [profile, setProfile] = useState<RoutingProfile>("driving");
     const [routeDurationSec, setRouteDurationSec] = useState<number | null>(null);
+    const [recenterTick, setRecenterTick] = useState(0);
 
     useEffect(() => {
         const id = setInterval(() => setNowMs(Date.now()), 1000);
@@ -94,6 +106,10 @@ export default function Map({ point }: Props) {
     const markerIcon = useMemo(() => buildPulseIcon(mode), [mode]);
     const statusLabel = mode === "online" ? "Online" : "Offline";
     const lastUpdate = formatLastUpdate(point);
+
+    function handleRecenter() {
+        setRecenterTick((t) => t + 1);
+    }
 
     async function calculateRoute(from: LatLng, to: LatLng, selectedProfile: RoutingProfile) {
         setLoadingRoute(true);
@@ -140,7 +156,7 @@ export default function Map({ point }: Props) {
                 etaLabel={formatDuration(routeDurationSec)}
             />
 
-            <InfoPanel point={point} />
+            <InfoPanel point={point} onRecenter={handleRecenter} />
 
             <MapContainer
                 center={[point.lat, point.lng]}
@@ -148,6 +164,7 @@ export default function Map({ point }: Props) {
                 className="h-full w-full"
                 zoomControl={false}
             >
+                <RecenterController lat={point.lat} lng={point.lng} zoom={18} tick={recenterTick} />
                 <ZoomControl position="topright" />
                 <TileLayer
                     attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'

@@ -2,9 +2,11 @@ import type { GpsPoint } from "@/types/gps";
 
 type Props = {
     point: GpsPoint;
+    // Optionaler Prop. Logik bleibt komplett in map.tsx
+    onRecenter?: () => void;
 };
 
-export default function InfoPanel({ point }: Props) {
+export default function InfoPanel({ point, onRecenter }: Props) {
     const speedDisplay =
         point.speed_kmh === null || point.speed_kmh === undefined
             ? "-"
@@ -20,6 +22,7 @@ export default function InfoPanel({ point }: Props) {
                 <button
                     type="button"
                     className="rounded-md w-1/2 bg-black px-3 py-2 text-sm font-medium text-white hover:bg-gray-600"
+                    onClick={onRecenter}
                 >
                     Re-center
                 </button>
