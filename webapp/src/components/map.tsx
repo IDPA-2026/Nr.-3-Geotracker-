@@ -93,6 +93,10 @@ export default function Map({ point }: Props) {
     const [routeDurationSec, setRouteDurationSec] = useState<number | null>(null);
     const [recenterTick, setRecenterTick] = useState(0);
 
+    // Alarm button state
+    const [sendingAlarm, setSendingAlarm] = useState(false);
+    const [alarmOk, setAlarmOk] = useState<string>("");
+
     useEffect(() => {
         const id = setInterval(() => setNowMs(Date.now()), 1000);
         return () => clearInterval(id);
@@ -109,6 +113,24 @@ export default function Map({ point }: Props) {
 
     function handleRecenter() {
         setRecenterTick((t) => t + 1);
+    }
+
+    async function handleTriggerAlarm() {
+        setSendingAlarm(true);
+        setAlarmOk("");
+        try {
+            const res = await fetch("/api/command/alarm", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ enabled: true }),
+            });
+            setAlarmOk(res.ok ? "Alarm sent" : "Alarm failed");
+        } catch {
+            setAlarmOk("Alarm failed");
+        } finally {
+            setSendingAlarm(false);
+            setTimeout(() => setAlarmOk(""), 2500);
+        }
     }
 
     async function calculateRoute(from: LatLng, to: LatLng, selectedProfile: RoutingProfile) {
@@ -157,6 +179,21 @@ export default function Map({ point }: Props) {
             />
 
             <InfoPanel point={point} onRecenter={handleRecenter} />
+
+            <div className="absolute bottom-4 left-4 z-[1000]">
+                <button
+                    onClick={handleTriggerAlarm}
+                    disabled={sendingAlarm}
+                    className="rounded-md bg-red-600 px-4 py-2 text-sm font-semibold text-white shadow-md disabled:opacity-60"
+                >
+                    {sendingAlarm ? "Sending..." : "Play sound"}
+                </button>
+                {alarmOk && (
+                    <p className="mt-1 text-xs font-medium text-white drop-shadow">
+                        {alarmOk}
+                    </p>
+                )}
+            </div>
 
             <MapContainer
                 center={[point.lat, point.lng]}
