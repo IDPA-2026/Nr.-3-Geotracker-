@@ -1,17 +1,41 @@
+#include <Wire.h> 
+#include <SparkFun_MAX1704x_Fuel_Gauge_Arduino_Library.h> 
+
+// ==========================================
+// --- PINS & OBJEKTE ---
+// ==========================================
 #define MODEM_RX 17
 #define MODEM_TX 18
 #define MODEM_PWR 12
+#define BUZZER_PIN 14 
 
 HardwareSerial SerialAT(1);
+SFE_MAX1704X lipo; // Batterie-Objekt
 
-const char apn[] = "internet";
+// ==========================================
+// --- KONFIGURATION ---
+// ==========================================
+const char apn[] = "internet"; // Digital Republic APN
 const char server[] = "idpa-gps-tracker-default-rtdb.europe-west1.firebasedatabase.app";
 
 void setup() {
   Serial.begin(115200);
   delay(1000);
-  Serial.println("STARTE SYSTEM...");
+  Serial.println("\nSTARTE GEOTRACKER SYSTEM...");
 
+  // 1. Buzzer initialisieren
+  pinMode(BUZZER_PIN, OUTPUT);
+  noTone(BUZZER_PIN);
+
+  // 2. I2C für den Waveshare Batterie-Chip (V2 Board -> Pins 15 und 16)
+  Wire.begin(15, 16); 
+  if (!lipo.begin()) {
+    Serial.println("WARNUNG: Batterie-Chip nicht gefunden! (Schalter auf ON?)");
+  } else {
+    Serial.println("Batterie-Chip erfolgreich initialisiert.");
+  }
+
+  // 3. Modem Startsequenz
   pinMode(MODEM_PWR, OUTPUT);
   digitalWrite(MODEM_PWR, HIGH);
   delay(1000);
@@ -43,21 +67,25 @@ void setup() {
 }
 
 void loop() {
-  Serial.println("---- Lese GPS Daten ----");
+  Serial.println("\n========================================");
+  Serial.println("---- Lese Batterie & GPS Daten ----");
+  
+  // 1. Batteriestand auslesen
+  float batPercent = lipo.getSOC(); 
+  if (batPercent > 100.0) batPercent = 100.0; // Wertebereich abfangen
+  Serial.print("Akkustand: "); Serial.print(batPercent); Serial.println("%");
+
+  // 2. GPS auslesen
   String rawGPS = getGPSData();
   String payload;
   
   float latitude = 0.0, longitude = 0.0, altitude = 0.0, speedKmh = 0.0, course = 0.0;
   String gpsDate = "", gpsTime = "";
 
+  // JSON zusammenbauen
   if (rawGPS != "" && parseFullGPS(rawGPS, latitude, longitude, altitude, speedKmh, course, gpsDate, gpsTime)) {
     Serial.println("GPS Fix gefunden & geparst!");
-    Serial.print("Lat: "); Serial.print(latitude, 6);
-    Serial.print(" | Lon: "); Serial.println(longitude, 6);
-    Serial.print("Alt: "); Serial.print(altitude); Serial.println(" m");
-    Serial.print("Speed: "); Serial.print(speedKmh); Serial.println(" km/h");
     
-    // Komplettes JSON zusammenbauen
     payload = "{\"status\":\"online\"";
     payload += ",\"lat\":" + String(latitude, 6);
     payload += ",\"lon\":" + String(longitude, 6);
@@ -65,19 +93,21 @@ void loop() {
     payload += ",\"speed_kmh\":" + String(speedKmh, 1);
     payload += ",\"course\":" + String(course, 1);
     payload += ",\"date\":\"" + gpsDate + "\"";
-    payload += ",\"time\":\"" + gpsTime + "\"}";
+    payload += ",\"time\":\"" + gpsTime + "\"";
+    payload += ",\"battery\":" + String(batPercent, 1) + "}"; 
   } else {
     Serial.println("Kein GPS Fix. Suche Satelliten...");
-    payload = "{\"status\":\"suche_satelliten_1\"}";
+    payload = "{\"status\":\"suche_satelliten_1\"";
+    payload += ",\"battery\":" + String(batPercent, 1) + "}";
   }
 
-  Serial.println("---- Starte HTTP Upload ----");
+  Serial.println("---- Starte HTTP Upload (Standort) ----");
 
   if (!sendATCommand("AT+HTTPINIT", "OK", 3000)) {
     Serial.println("Fehler bei HTTPINIT. Versuche HTTPTERM...");
     sendATCommand("AT+HTTPTERM", "OK", 2000);
     delay(5000);
-    return;
+    return; // Loop neu starten
   }
 
   String url = "https://" + String(server) + "/locations/test_tracker.json?x-http-method-override=PATCH";
@@ -93,13 +123,18 @@ void loop() {
     sendATCommand("AT+HTTPACTION=1", "+HTTPACTION: 1,200", 15000);
   }
 
-  sendATCommand("AT+HTTPTERM", "OK", 3000);
+  sendATCommand("AT+HTTPTERM", "OK", 3000); // Upload beenden
 
-  Serial.println("Upload-Zyklus beendet. Warte 20 Sekunden...");
-  delay(20000);
+  // 3. Auf eingehende Alarme prüfen (Nokia Buzzer)
+  checkAlarm();
+
+  Serial.println("Zyklus beendet. Warte 5 Sekunden...");
+  delay(5000); // Schnelles Polling für die Testphase & Präsentation
 }
 
-// --- HILFSFUNKTIONEN ---
+// ==========================================
+// --- HILFSFUNKTIONEN (GPS & MODEM) ---
+// ==========================================
 
 String getGPSData() {
   SerialAT.println("AT+CGPSINFO");
@@ -127,12 +162,10 @@ String getGPSData() {
 }
 
 bool parseFullGPS(String nmea, float &lat, float &lon, float &alt, float &speed, float &course, String &date, String &time) {
-  // Beispiel Input: "4729.8791,N,00843.2576,E,040326,081850.000,466.5,1.95,346.0"
   int p[9];
   p[0] = nmea.indexOf(',');
   for (int i = 1; i < 9; i++) {
     p[i] = nmea.indexOf(',', p[i-1] + 1);
-    // Erlaubt das Fehlen des letzten Kommas, falls der String am Ende aufhört
     if (p[i] == -1 && i < 8) return false; 
   }
 
@@ -154,21 +187,18 @@ bool parseFullGPS(String nmea, float &lat, float &lon, float &alt, float &speed,
 
   if (latStr.length() < 4 || lonStr.length() < 5) return false;
 
-  // Latitude
   float latDeg = latStr.substring(0, 2).toFloat();
   float latMin = latStr.substring(2).toFloat();
   lat = latDeg + (latMin / 60.0);
   if (latDir == "S") lat *= -1.0;
 
-  // Longitude
   float lonDeg = lonStr.substring(0, 3).toFloat();
   float lonMin = lonStr.substring(3).toFloat();
   lon = lonDeg + (lonMin / 60.0);
   if (lonDir == "W") lon *= -1.0;
 
-  // Zusätzliche Daten
   alt = altStr.toFloat();
-  speed = speedStr.toFloat() * 1.852; // NMEA liefert Knoten. 1 Knoten = 1.852 km/h
+  speed = speedStr.toFloat() * 1.852; 
   course = courseStr.toFloat();
 
   return true;
@@ -197,4 +227,76 @@ bool readResponse(const char* expected_response, unsigned long timeout) {
   Serial.print("TIMEOUT/ERROR. Antwort war: ");
   Serial.println(response);
   return false;
+}
+
+// ==========================================
+// --- BUZZER & ALARM FUNKTIONEN ---
+// ==========================================
+
+void playMelody() {
+  Serial.println("ALARM! Spiele Retro-Klingelton...");
+  
+  // Die Frequenzen für den klassischen Handy-Klingelton
+  int melody[] = {1319, 1175, 740, 831, 1109, 988, 587, 659, 988, 880, 554, 659, 880};
+  
+  // Die Dauer der einzelnen Töne
+  int durations[] = {125, 125, 250, 250, 125, 125, 250, 250, 125, 125, 250, 250, 500};
+
+  for (int i = 0; i < 13; i++) {
+    tone(BUZZER_PIN, melody[i]);
+    // Ein bisschen länger warten als der Ton spielt, für die Pausen dazwischen
+    delay(durations[i] * 1.3); 
+    noTone(BUZZER_PIN);
+  }
+}
+
+void checkAlarm() {
+  Serial.println("---- Prüfe auf Alarm-Signal (Buzzer) ----");
+
+  if (!sendATCommand("AT+HTTPINIT", "OK", 3000)) {
+    sendATCommand("AT+HTTPTERM", "OK", 2000);
+    return;
+  }
+
+  // 1. Alarm-Status abrufen (HTTP GET)
+  String url = "https://" + String(server) + "/commands/test_tracker.json";
+  sendATCommand((String("AT+HTTPPARA=\"URL\",\"") + url + "\"").c_str(), "OK", 3000);
+  sendATCommand("AT+HTTPACTION=0", "+HTTPACTION: 0,200", 15000); // 0 = GET
+
+  SerialAT.println("AT+HTTPREAD=0,500");
+  unsigned long start_time = millis();
+  String response = "";
+  while (millis() - start_time < 3000) {
+    if (SerialAT.available()) {
+      response += (char)SerialAT.read();
+    }
+  }
+  sendATCommand("AT+HTTPTERM", "OK", 3000); // GET beenden
+
+  // Prüfen, ob "true" im empfangenen JSON steht
+  if (response.indexOf("\"trigger_alarm\":true") != -1 || response.indexOf("\"trigger_alarm\": true") != -1) {
+    
+    // Melodie abspielen!
+    playMelody();
+
+    // 2. Alarm wieder auf false setzen (HTTP PATCH)
+    Serial.println("Setze Alarm in Firebase zurück auf false...");
+    if (sendATCommand("AT+HTTPINIT", "OK", 3000)) {
+      url = "https://" + String(server) + "/commands/test_tracker.json?x-http-method-override=PATCH";
+      sendATCommand((String("AT+HTTPPARA=\"URL\",\"") + url + "\"").c_str(), "OK", 3000);
+      sendATCommand("AT+HTTPPARA=\"CONTENT\",\"application/json\"", "OK", 3000);
+      
+      String resetPayload = "{\"trigger_alarm\":false}";
+      String dataCmd = "AT+HTTPDATA=" + String(resetPayload.length()) + ",10000";
+      
+      if (sendATCommand(dataCmd.c_str(), "DOWNLOAD", 5000)) {
+        SerialAT.print(resetPayload);
+        readResponse("OK", 5000);
+        sendATCommand("AT+HTTPACTION=1", "+HTTPACTION: 1,200", 15000);
+      }
+      sendATCommand("AT+HTTPTERM", "OK", 3000);
+    }
+  } else {
+    Serial.println("Kein Alarm angefordert.");
+  }
 }
