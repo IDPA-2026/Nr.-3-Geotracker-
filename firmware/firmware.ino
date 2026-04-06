@@ -1,38 +1,41 @@
 #include <Wire.h> 
 #include <SparkFun_MAX1704x_Fuel_Gauge_Arduino_Library.h> 
 
-// --- PINS ---
+// ==========================================
+// --- PINS & OBJEKTE ---
+// ==========================================
 #define MODEM_RX 17
 #define MODEM_TX 18
 #define MODEM_PWR 12
 #define BUZZER_PIN 14 
 
-// --- OBJEKTE ---
 HardwareSerial SerialAT(1);
 SFE_MAX1704X lipo; // Batterie-Objekt
 
+// ==========================================
 // --- KONFIGURATION ---
-const char apn[] = "internet";
+// ==========================================
+const char apn[] = "internet"; // Digital Republic APN
 const char server[] = "idpa-gps-tracker-default-rtdb.europe-west1.firebasedatabase.app";
 
 void setup() {
   Serial.begin(115200);
   delay(1000);
-  Serial.println("STARTE SYSTEM...");
+  Serial.println("\nSTARTE GEOTRACKER SYSTEM...");
 
-  // Buzzer initialisieren
+  // 1. Buzzer initialisieren
   pinMode(BUZZER_PIN, OUTPUT);
   noTone(BUZZER_PIN);
 
-  // I2C für den Waveshare Batterie-Chip (V2 Board -> Pins 15 und 16)
+  // 2. I2C für den Waveshare Batterie-Chip (V2 Board -> Pins 15 und 16)
   Wire.begin(15, 16); 
   if (!lipo.begin()) {
-    Serial.println("WARNUNG: Batterie-Chip nicht gefunden!");
+    Serial.println("WARNUNG: Batterie-Chip nicht gefunden! (Schalter auf ON?)");
   } else {
     Serial.println("Batterie-Chip erfolgreich initialisiert.");
   }
 
-  // Modem Startsequenz
+  // 3. Modem Startsequenz
   pinMode(MODEM_PWR, OUTPUT);
   digitalWrite(MODEM_PWR, HIGH);
   delay(1000);
@@ -79,10 +82,10 @@ void loop() {
   float latitude = 0.0, longitude = 0.0, altitude = 0.0, speedKmh = 0.0, course = 0.0;
   String gpsDate = "", gpsTime = "";
 
+  // JSON zusammenbauen
   if (rawGPS != "" && parseFullGPS(rawGPS, latitude, longitude, altitude, speedKmh, course, gpsDate, gpsTime)) {
     Serial.println("GPS Fix gefunden & geparst!");
     
-    // Komplettes JSON zusammenbauen (mit Batterie)
     payload = "{\"status\":\"online\"";
     payload += ",\"lat\":" + String(latitude, 6);
     payload += ",\"lon\":" + String(longitude, 6);
@@ -94,7 +97,6 @@ void loop() {
     payload += ",\"battery\":" + String(batPercent, 1) + "}"; 
   } else {
     Serial.println("Kein GPS Fix. Suche Satelliten...");
-    // JSON für fehlenden Fix (Batterie senden wir trotzdem!)
     payload = "{\"status\":\"suche_satelliten_1\"";
     payload += ",\"battery\":" + String(batPercent, 1) + "}";
   }
@@ -105,7 +107,7 @@ void loop() {
     Serial.println("Fehler bei HTTPINIT. Versuche HTTPTERM...");
     sendATCommand("AT+HTTPTERM", "OK", 2000);
     delay(5000);
-    return;
+    return; // Loop neu starten
   }
 
   String url = "https://" + String(server) + "/locations/test_tracker.json?x-http-method-override=PATCH";
@@ -123,11 +125,11 @@ void loop() {
 
   sendATCommand("AT+HTTPTERM", "OK", 3000); // Upload beenden
 
-  // 3. Auf eingehende Alarme prüfen (Buzzer)
+  // 3. Auf eingehende Alarme prüfen (Nokia Buzzer)
   checkAlarm();
 
   Serial.println("Zyklus beendet. Warte 5 Sekunden...");
-  delay(5000);
+  delay(5000); // Schnelles Polling für die Testphase & Präsentation
 }
 
 // ==========================================
