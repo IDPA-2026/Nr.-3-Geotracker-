@@ -13,10 +13,15 @@ HardwareSerial SerialAT(1);
 SFE_MAX1704X lipo; // Batterie-Objekt
 
 // ==========================================
-// --- KONFIGURATION ---
+// --- KONFIGURATION & TIMING ---
 // ==========================================
 const char apn[] = "internet"; // Digital Republic APN
 const char server[] = "idpa-gps-tracker-default-rtdb.europe-west1.firebasedatabase.app";
+
+// Asynchrone Variablen anstelle von delay()
+unsigned long lastCycleTime = 0;
+const unsigned long cycleInterval = 500; // 5 Sekunden Polling-Intervall
+String ringBuffer = ""; // Puffer für eingehende Anrufe
 
 void setup() {
   Serial.begin(115200);
@@ -67,12 +72,27 @@ void setup() {
 }
 
 void loop() {
+  // 1. Permanent auf Anrufe prüfen (läuft tausende Male pro Sekunde)
+  checkIncomingCall();
+
+  // 2. Prüfen, ob 5 Sekunden vergangen sind, um GPS-Daten zu senden
+  if (millis() - lastCycleTime >= cycleInterval) {
+    lastCycleTime = millis(); // Timer zurücksetzen
+    performTrackingCycle();   // Den eigentlichen Upload-Job ausführen
+  }
+}
+
+// ==========================================
+// --- HAUPT-ZYKLUS (GPS & HTTP) ---
+// ==========================================
+
+void performTrackingCycle() {
   Serial.println("\n========================================");
   Serial.println("---- Lese Batterie & GPS Daten ----");
   
   // 1. Batteriestand auslesen
   float batPercent = lipo.getSOC(); 
-  if (batPercent > 100.0) batPercent = 100.0; // Wertebereich abfangen
+  if (batPercent > 100.0) batPercent = 100.0; 
   Serial.print("Akkustand: "); Serial.print(batPercent); Serial.println("%");
 
   // 2. GPS auslesen
@@ -106,8 +126,7 @@ void loop() {
   if (!sendATCommand("AT+HTTPINIT", "OK", 3000)) {
     Serial.println("Fehler bei HTTPINIT. Versuche HTTPTERM...");
     sendATCommand("AT+HTTPTERM", "OK", 2000);
-    delay(5000);
-    return; // Loop neu starten
+    return; // Zyklus abbrechen, beim nächsten Mal neu versuchen
   }
 
   String url = "https://" + String(server) + "/locations/test_tracker.json?x-http-method-override=PATCH";
@@ -125,11 +144,41 @@ void loop() {
 
   sendATCommand("AT+HTTPTERM", "OK", 3000); // Upload beenden
 
-  // 3. Auf eingehende Alarme prüfen (Nokia Buzzer)
+  // 3. Auf eingehende Alarme aus der Datenbank prüfen (Web-Button)
   checkAlarm();
+  
+  Serial.println("Tracking-Zyklus beendet. Warte asynchron auf nächste Ausführung...");
+}
 
-  Serial.println("Zyklus beendet. Warte 5 Sekunden...");
-  delay(5000); // Schnelles Polling für die Testphase & Präsentation
+// ==========================================
+// --- ANRUF ERKENNUNG ---
+// ==========================================
+
+void checkIncomingCall() {
+  // Wenn das Modem etwas sendet (während wir eigentlich "warten")
+  while (SerialAT.available()) {
+    char c = SerialAT.read();
+    ringBuffer += c;
+
+    // Puffer nicht ins Unendliche wachsen lassen (Memory Leak verhindern)
+    if (ringBuffer.length() > 50) {
+      ringBuffer = ringBuffer.substring(20); 
+    }
+
+    // Wenn das Modem "RING" meldet, ruft jemand an!
+    if (ringBuffer.indexOf("RING") != -1) {
+      Serial.println("\n*** EINGEHENDER ANRUF ERKANNT! ***");
+      
+      // 1. Sofort auflegen (damit keine Kosten entstehen)
+      sendATCommand("ATH", "OK", 2000); 
+      
+      // 2. Den Buzzer abfeuern
+      playMelody(); 
+      
+      // Puffer leeren, damit er nicht sofort nochmals triggert
+      ringBuffer = ""; 
+    }
+  }
 }
 
 // ==========================================
@@ -244,14 +293,13 @@ void playMelody() {
 
   for (int i = 0; i < 13; i++) {
     tone(BUZZER_PIN, melody[i]);
-    // Ein bisschen länger warten als der Ton spielt, für die Pausen dazwischen
     delay(durations[i] * 1.3); 
     noTone(BUZZER_PIN);
   }
 }
 
 void checkAlarm() {
-  Serial.println("---- Prüfe auf Alarm-Signal (Buzzer) ----");
+  Serial.println("---- Prüfe auf Alarm-Signal (Datenbank) ----");
 
   if (!sendATCommand("AT+HTTPINIT", "OK", 3000)) {
     sendATCommand("AT+HTTPTERM", "OK", 2000);
@@ -276,7 +324,6 @@ void checkAlarm() {
   // Prüfen, ob "true" im empfangenen JSON steht
   if (response.indexOf("\"trigger_alarm\":true") != -1 || response.indexOf("\"trigger_alarm\": true") != -1) {
     
-    // Melodie abspielen!
     playMelody();
 
     // 2. Alarm wieder auf false setzen (HTTP PATCH)
